@@ -435,13 +435,13 @@ class ReceiptScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Instrucciones:\n'
                 '1. Abre WhatsApp\n'
                 '2. Busca el contacto $phoneNumber\n'
                 '3. Pega el recibo en el chat\n'
                 '4. Envía el mensaje',
-                style: TextStyle(fontSize: 13, color: Colors.black87),
+                style: const TextStyle(fontSize: 13, color: Colors.black87),
               ),
             ],
           ),
@@ -489,7 +489,7 @@ class ReceiptScreen extends StatelessWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.whatsapp, color: Colors.green),
+            icon: const Icon(Icons.message, color: Colors.green),
             tooltip: 'Enviar por WhatsApp',
             onPressed: () => _sendViaWhatsApp(context, '64794160'),
           ),
@@ -566,7 +566,7 @@ class ReceiptScreen extends StatelessWidget {
                 Center(
                   child: ElevatedButton.icon(
                     onPressed: () => _sendViaWhatsApp(context, '64794160'),
-                    icon: const Icon(Icons.whatsapp, size: 28),
+                    icon: const Icon(Icons.message, size: 28),
                     label: const Text(
                       'Enviar por WhatsApp',
                       style: TextStyle(fontSize: 18),
