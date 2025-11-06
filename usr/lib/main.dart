@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 
 // --- Model ---
 class Payment {
@@ -24,6 +25,44 @@ class Payment {
   
   // Saldo restante
   double get remainingBalance => debtAmount - totalPaid;
+
+  // Generar texto del recibo para WhatsApp
+  String generateReceiptText() {
+    final dateFormatted = DateFormat('dd/MM/yyyy').format(date);
+    final timeFormatted = DateFormat('HH:mm').format(date);
+    
+    return '''
+━━━━━━━━━━━━━━━━━━━━━
+💰 *RECIBO DE PAGO* 💰
+━━━━━━━━━━━━━━━━━━━━━
+
+📅 *Fecha:* $dateFormatted
+🕐 *Hora:* $timeFormatted
+
+👤 *Cliente:* $clientName
+📝 *Concepto:* $description
+
+━━━━━━━━━━━━━━━━━━━━━
+📊 *DETALLE DEL PAGO*
+━━━━━━━━━━━━━━━━━━━━━
+
+💵 Deuda Total: \$${debtAmount.toStringAsFixed(2)}
+
+💳 Réditos Pagados: \$${interestPaid.toStringAsFixed(2)}
+💳 Recargo Pagado: \$${surchargePaid.toStringAsFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━
+
+✅ *Total Pagado:* \$${totalPaid.toStringAsFixed(2)}
+📌 *Saldo Restante:* \$${remainingBalance.toStringAsFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━
+
+✨ ¡Gracias por su pago! ✨
+
+_Recibo generado automáticamente_
+''';
+  }
 }
 
 void main() {
@@ -337,6 +376,99 @@ class ReceiptScreen extends StatelessWidget {
 
   const ReceiptScreen({super.key, required this.payment});
 
+  void _sendViaWhatsApp(BuildContext context, String phoneNumber) {
+    final receiptText = payment.generateReceiptText();
+    
+    // Copiar al portapapeles
+    Clipboard.setData(ClipboardData(text: receiptText)).then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('✅ Recibo copiado al portapapeles'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
+
+    // Mostrar diálogo con el recibo y opciones
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.message, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Enviar por WhatsApp'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Número: $phoneNumber',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Text(
+                  receiptText,
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '✅ Recibo copiado al portapapeles',
+                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Instrucciones:\n'
+                '1. Abre WhatsApp\n'
+                '2. Busca el contacto $phoneNumber\n'
+                '3. Pega el recibo en el chat\n'
+                '4. Envía el mensaje',
+                style: TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Copiar nuevamente
+              Clipboard.setData(ClipboardData(text: receiptText));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Copiado nuevamente'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+            child: const Text('Copiar otra vez'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -344,20 +476,22 @@ class ReceiptScreen extends StatelessWidget {
         title: const Text('Recibo de Pago'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.print),
+            icon: const Icon(Icons.copy),
+            tooltip: 'Copiar recibo',
             onPressed: () {
+              Clipboard.setData(ClipboardData(text: payment.generateReceiptText()));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Función de imprimir no implementada.')),
+                const SnackBar(
+                  content: Text('✅ Recibo copiado al portapapeles'),
+                  backgroundColor: Colors.green,
+                ),
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Función de compartir no implementada.')),
-              );
-            },
+            icon: const Icon(Icons.whatsapp, color: Colors.green),
+            tooltip: 'Enviar por WhatsApp',
+            onPressed: () => _sendViaWhatsApp(context, '64794160'),
           ),
         ],
       ),
@@ -424,6 +558,27 @@ class ReceiptScreen extends StatelessWidget {
                   child: Text(
                     '¡Gracias por su pago!',
                     style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey, fontSize: 16),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _sendViaWhatsApp(context, '64794160'),
+                    icon: const Icon(Icons.whatsapp, size: 28),
+                    label: const Text(
+                      'Enviar por WhatsApp',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
               ],
